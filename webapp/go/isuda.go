@@ -22,6 +22,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/joho/godotenv"
+	"github.com/newrelic/go-agent"
 	"github.com/unrolled/render"
 )
 
@@ -390,6 +392,14 @@ func getSession(w http.ResponseWriter, r *http.Request) *sessions.Session {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	config := newrelic.NewConfig("Isuda", os.Getenv("NEWRELIC_TOKEN"))
+	app, err := newrelic.NewApplication(config)
+
 	host := os.Getenv("ISUDA_DB_HOST")
 	if host == "" {
 		host = "localhost"
@@ -457,23 +467,23 @@ func main() {
 
 	r := mux.NewRouter()
 	r.UseEncodedPath()
-	r.HandleFunc("/", myHandler(topHandler))
-	r.HandleFunc("/initialize", myHandler(initializeHandler)).Methods("GET")
-	r.HandleFunc("/robots.txt", myHandler(robotsHandler))
-	r.HandleFunc("/keyword", myHandler(keywordPostHandler)).Methods("POST")
+	r.HandleFunc("/", myHandler(app, topHandler))
+	r.HandleFunc("/initialize", myHandler(app, initializeHandler)).Methods("GET")
+	r.HandleFunc("/robots.txt", myHandler(app, robotsHandler))
+	r.HandleFunc("/keyword", myHandler(app, keywordPostHandler)).Methods("POST")
 
 	l := r.PathPrefix("/login").Subrouter()
-	l.Methods("GET").HandlerFunc(myHandler(loginHandler))
-	l.Methods("POST").HandlerFunc(myHandler(loginPostHandler))
-	r.HandleFunc("/logout", myHandler(logoutHandler))
+	l.Methods("GET").HandlerFunc(myHandler(app, loginHandler))
+	l.Methods("POST").HandlerFunc(myHandler(app, loginPostHandler))
+	r.HandleFunc("/logout", myHandler(app, logoutHandler))
 
 	g := r.PathPrefix("/register").Subrouter()
-	g.Methods("GET").HandlerFunc(myHandler(registerHandler))
-	g.Methods("POST").HandlerFunc(myHandler(registerPostHandler))
+	g.Methods("GET").HandlerFunc(myHandler(app, registerHandler))
+	g.Methods("POST").HandlerFunc(myHandler(app, registerPostHandler))
 
 	k := r.PathPrefix("/keyword/{keyword}").Subrouter()
-	k.Methods("GET").HandlerFunc(myHandler(keywordByKeywordHandler))
-	k.Methods("POST").HandlerFunc(myHandler(keywordByKeywordDeleteHandler))
+	k.Methods("GET").HandlerFunc(myHandler(app, keywordByKeywordHandler))
+	k.Methods("POST").HandlerFunc(myHandler(app, keywordByKeywordDeleteHandler))
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./public/")))
 	log.Fatal(http.ListenAndServe(":5000", r))

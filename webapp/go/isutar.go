@@ -11,6 +11,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
+	"github.com/newrelic/go-agent"
 	"github.com/unrolled/render"
 )
 
@@ -73,6 +75,14 @@ func starsPostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	config := newrelic.NewConfig("Isutar", os.Getenv("NEWRELIC_TOKEN"))
+	app, err := newrelic.NewApplication(config)
+
 	host := os.Getenv("ISUTAR_DB_HOST")
 	if host == "" {
 		host = "localhost"
@@ -108,10 +118,10 @@ func main() {
 	re = render.New(render.Options{Directory: "dummy"})
 
 	r := mux.NewRouter()
-	r.HandleFunc("/initialize", myHandler(initializeHandler))
+	r.HandleFunc("/initialize", myHandler(app, initializeHandler))
 	s := r.PathPrefix("/stars").Subrouter()
-	s.Methods("GET").HandlerFunc(myHandler(starsHandler))
-	s.Methods("POST").HandlerFunc(myHandler(starsPostHandler))
+	s.Methods("GET").HandlerFunc(myHandler(app, starsHandler))
+	s.Methods("POST").HandlerFunc(myHandler(app, starsPostHandler))
 
 	log.Fatal(http.ListenAndServe(":5001", r))
 }

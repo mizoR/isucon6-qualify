@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"os"
 	"runtime/debug"
+
+	"github.com/newrelic/go-agent"
 )
 
 func prepareHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
@@ -19,8 +21,11 @@ func prepareHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFun
 	}
 }
 
-func myHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+func myHandler(app newrelic.Application, fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		txn := app.StartTransaction(r.Method+" "+r.URL.Path, w, r)
+		defer txn.End()
+
 		defer func() {
 			if err := recover(); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v", err)
