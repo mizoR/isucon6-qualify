@@ -24,6 +24,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 	"github.com/newrelic/go-agent"
+	"github.com/pkg/profile"
 	"github.com/unrolled/render"
 )
 
@@ -392,6 +393,8 @@ func getSession(w http.ResponseWriter, r *http.Request) *sessions.Session {
 }
 
 func main() {
+	defer profile.Start().Stop()
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
